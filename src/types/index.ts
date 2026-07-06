@@ -86,3 +86,31 @@ export interface DBPage {
   created_at: string;
   updated_at: string;
 }
+
+// ─── Auth & Sync Types ────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  created_at: number;
+  last_login?: number;
+}
+
+export interface SyncQueueItem {
+  operation_id: string;
+  type:
+    | "upsert_notebook"
+    | "delete_notebook"
+    | "upsert_page"
+    | "delete_page"
+    | "upsert_folder"
+    | "delete_folder"
+    | "upsert_snapshot";
+  payload: any;
+  timestamp: number;
+  status: "pending" | "uploading" | "synced" | "failed";
+  retry_count: number;
+}
+

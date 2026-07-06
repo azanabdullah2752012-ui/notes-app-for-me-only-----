@@ -10,6 +10,7 @@ import { getAssetUrlsByImport } from "@tldraw/assets/imports.vite";
 import { useUIStore } from "@/store/uiStore";
 import { useNotebookStore } from "@/store/notebookStore";
 import { savePageSnapshot, loadPageSnapshot } from "@/lib/db";
+import { queueOperation } from "@/lib/syncEngine";
 import { useEditorRef } from "./EditorContext";
 import "tldraw/tldraw.css";
 
@@ -70,7 +71,10 @@ export default function TldrawEditor() {
       try {
         setSaveStatus("saving");
         const snapshot = getSnapshot(editor.store);
-        await savePageSnapshot(pageId, JSON.stringify(snapshot));
+        const jsonStr = JSON.stringify(snapshot);
+        await savePageSnapshot(pageId, jsonStr);
+        useNotebookStore.getState().updatePageSnapshot(pageId, jsonStr);
+        queueOperation("upsert_snapshot", { pageId, snapshotJson: jsonStr, updatedAt: Date.now() });
         setSaveStatus("saved");
       } catch (err) {
         console.error("[ByNotes] Save failed:", err);

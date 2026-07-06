@@ -15,41 +15,47 @@ import {
 import clsx from "clsx";
 import { useUIStore } from "@/store/uiStore";
 import { useNotebookStore } from "@/store/notebookStore";
+import { useAuthStore } from "@/store/authStore";
 import { Button, Tooltip } from "@/components/ui";
-import { Theme, SaveStatus } from "@/types";
+import { Theme, SaveStatus, SyncStatus } from "@/types";
 
-// ─── Save Status Indicator ───────────────────────────────────────────────────
+// ─── Save Status Indicator (Section 45) ──────────────────────────────────────
 
-function SaveIndicator({ status }: { status: SaveStatus }) {
-  const [displayStatus, setDisplayStatus] = useState<string>("Saved");
+function SaveIndicator({ saveStatus, syncStatus }: { saveStatus: SaveStatus; syncStatus: SyncStatus }) {
+  let text = "Synced";
+  let color = "text-[var(--text-tertiary)] bg-[var(--bg-hover)]/50";
+  let dotColor = "bg-[var(--success)]";
+  let isPulsing = false;
 
-  useEffect(() => {
-    if (status === "saving") setDisplayStatus("Saving…");
-    else if (status === "saved") setDisplayStatus("Saved");
-    else if (status === "unsaved") setDisplayStatus("Offline");
-  }, [status]);
+  if (saveStatus === "saving") {
+    text = "Saving…";
+    color = "text-[var(--warning)] bg-[var(--warning)]/10 font-medium";
+    dotColor = "bg-[var(--warning)]";
+    isPulsing = true;
+  } else if (syncStatus === "syncing") {
+    text = "Syncing…";
+    color = "text-[var(--accent)] bg-[var(--accent-subtle)] font-medium";
+    dotColor = "bg-[var(--accent)]";
+    isPulsing = true;
+  } else if (syncStatus === "offline" || !navigator.onLine) {
+    text = "Offline";
+    color = "text-[var(--text-tertiary)] bg-[var(--bg-hover)]";
+    dotColor = "bg-[var(--text-tertiary)]";
+  } else if (saveStatus === "saved" || syncStatus === "saved") {
+    text = "Synced";
+    color = "text-[var(--text-tertiary)] bg-[var(--bg-hover)]/50";
+    dotColor = "bg-[var(--success)]";
+  }
 
   return (
     <div
       className={clsx(
         "flex items-center gap-2 text-xs px-2.5 py-1 rounded-full transition-all duration-300 select-none",
-        status === "saved" && "text-[var(--text-tertiary)] bg-[var(--bg-hover)]/50",
-        status === "saving" && "text-[var(--warning)] bg-[var(--warning)]/10 font-medium",
-        status === "unsaved" && "text-[var(--text-tertiary)] bg-[var(--bg-hover)]"
+        color
       )}
     >
-      {status === "saving" && (
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
-      )}
-      {status === "saved" && (
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-      )}
-      {status === "unsaved" && (
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-tertiary)]" />
-      )}
-      <span className="hidden sm:inline transition-opacity duration-200">
-        {displayStatus}
-      </span>
+      <span className={clsx("w-1.5 h-1.5 rounded-full", dotColor, isPulsing && "animate-pulse")} />
+      <span className="hidden sm:inline transition-opacity duration-200">{text}</span>
     </div>
   );
 }
@@ -166,6 +172,9 @@ interface TopBarProps {
 export default function TopBar({ onUndo, onRedo, canUndo, canRedo }: TopBarProps) {
   const { sidebarOpen, toggleSidebar, setSettingsOpen, setSearchOpen, setExportOpen } = useUIStore();
   const saveStatus = useNotebookStore((s) => s.saveStatus);
+  const syncStatus = useNotebookStore((s) => s.syncStatus);
+  const user = useAuthStore((s) => s.user);
+  const setLoginModalOpen = useAuthStore((s) => s.setLoginModalOpen);
 
   // Keyboard shortcut: Cmd+K → search
   useEffect(() => {
@@ -187,10 +196,11 @@ export default function TopBar({ onUndo, onRedo, canUndo, canRedo }: TopBarProps
         backdropFilter: "blur(var(--glass-blur))",
         WebkitBackdropFilter: "blur(var(--glass-blur))",
         borderColor: "var(--border-subtle)",
+        zIndex: 30,
       }}
       aria-label="Top bar"
     >
-      {/* Sidebar toggle */}
+      {/* Left panel toggle */}
       <Tooltip label={sidebarOpen ? "Hide sidebar" : "Show sidebar"} side="bottom">
         <Button
           variant="ghost"
@@ -207,8 +217,8 @@ export default function TopBar({ onUndo, onRedo, canUndo, canRedo }: TopBarProps
         <NotebookTitle />
       </div>
 
-      {/* Save status */}
-      <SaveIndicator status={saveStatus} />
+      {/* Save status (Section 45) */}
+      <SaveIndicator saveStatus={saveStatus} syncStatus={syncStatus} />
 
       {/* Undo / Redo */}
       <div className="flex items-center gap-0.5">
@@ -275,13 +285,28 @@ export default function TopBar({ onUndo, onRedo, canUndo, canRedo }: TopBarProps
         </Button>
       </Tooltip>
 
-      {/* User avatar */}
-      <button
-        className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center flex-shrink-0"
-        aria-label="User profile"
-      >
-        <User size={13} className="text-white" />
-      </button>
+      {/* User avatar / Account (Section 38 & 40) */}
+      <Tooltip label={user ? user.name : "Sign In / Workspace"} side="bottom">
+        <button
+          onClick={() => {
+            if (user) {
+              setSettingsOpen(true);
+            } else {
+              setLoginModalOpen(true);
+            }
+          }}
+          className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center flex-shrink-0 shadow-sm border border-[var(--border-subtle)] hover:scale-105 transition-transform overflow-hidden cursor-pointer"
+          aria-label="User profile"
+        >
+          {user?.avatar_url ? (
+            <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+          ) : user ? (
+            <span className="text-white text-xs font-bold">{user.name.charAt(0).toUpperCase()}</span>
+          ) : (
+            <User size={13} className="text-white" />
+          )}
+        </button>
+      </Tooltip>
     </header>
   );
 }

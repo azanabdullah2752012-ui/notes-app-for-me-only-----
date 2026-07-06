@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import { Folder, Notebook, Page, SaveStatus, SyncStatus } from "@/types";
+import { saveNotebookToDB, savePageToDB } from "@/lib/db";
+import { queueOperation } from "@/lib/syncEngine";
 
 interface NotebookState {
   folders: Folder[];
@@ -54,15 +56,19 @@ export const useNotebookStore = create<NotebookState>()(
       createFolder: (name, parentId = null) => {
         const folder: Folder = { id: uuidv4(), name, parentId, createdAt: now(), updatedAt: now() };
         set((s) => ({ folders: [...s.folders, folder] }));
+        queueOperation("upsert_folder", folder);
         return folder;
       },
       renameFolder: (id, name) => {
         set((s) => ({
           folders: s.folders.map((f) => f.id === id ? { ...f, name, updatedAt: now() } : f),
         }));
+        const f = get().folders.find((f) => f.id === id);
+        if (f) queueOperation("upsert_folder", f);
       },
       deleteFolder: (id) => {
         set((s) => ({ folders: s.folders.filter((f) => f.id !== id) }));
+        queueOperation("delete_folder", { id });
       },
 
       // ── Notebooks ─────────────────────────────────────────────────────────
@@ -72,18 +78,29 @@ export const useNotebookStore = create<NotebookState>()(
           isFavorite: false, isDeleted: false,
         };
         set((s) => ({ notebooks: [...s.notebooks, notebook] }));
+        saveNotebookToDB(notebook);
+        queueOperation("upsert_notebook", notebook);
+
         // Auto-create first page
         const page: Page = {
           id: uuidv4(), notebookId: notebook.id, name: "Page 1",
           order: 0, createdAt: now(), updatedAt: now(), isDeleted: false,
         };
         set((s) => ({ pages: [...s.pages, page] }));
+        savePageToDB(page);
+        queueOperation("upsert_page", page);
+
         return notebook;
       },
       renameNotebook: (id, name) => {
         set((s) => ({
           notebooks: s.notebooks.map((n) => n.id === id ? { ...n, name, updatedAt: now() } : n),
         }));
+        const nb = get().notebooks.find((n) => n.id === id);
+        if (nb) {
+          saveNotebookToDB(nb);
+          queueOperation("upsert_notebook", nb);
+        }
       },
       deleteNotebook: (id) => {
         set((s) => ({
@@ -91,6 +108,11 @@ export const useNotebookStore = create<NotebookState>()(
             n.id === id ? { ...n, isDeleted: true, deletedAt: now() } : n
           ),
         }));
+        const nb = get().notebooks.find((n) => n.id === id);
+        if (nb) {
+          saveNotebookToDB(nb);
+          queueOperation("upsert_notebook", nb);
+        }
       },
       restoreNotebook: (id) => {
         set((s) => ({
@@ -98,12 +120,18 @@ export const useNotebookStore = create<NotebookState>()(
             n.id === id ? { ...n, isDeleted: false, deletedAt: undefined } : n
           ),
         }));
+        const nb = get().notebooks.find((n) => n.id === id);
+        if (nb) {
+          saveNotebookToDB(nb);
+          queueOperation("upsert_notebook", nb);
+        }
       },
       permanentlyDeleteNotebook: (id) => {
         set((s) => ({
           notebooks: s.notebooks.filter((n) => n.id !== id),
           pages: s.pages.filter((p) => p.notebookId !== id),
         }));
+        queueOperation("delete_notebook", { id });
       },
       toggleFavorite: (id) => {
         set((s) => ({
@@ -111,6 +139,11 @@ export const useNotebookStore = create<NotebookState>()(
             n.id === id ? { ...n, isFavorite: !n.isFavorite, updatedAt: now() } : n
           ),
         }));
+        const nb = get().notebooks.find((n) => n.id === id);
+        if (nb) {
+          saveNotebookToDB(nb);
+          queueOperation("upsert_notebook", nb);
+        }
       },
       duplicateNotebook: (id) => {
         const original = get().notebooks.find((n) => n.id === id);
@@ -122,6 +155,12 @@ export const useNotebookStore = create<NotebookState>()(
           ...p, id: uuidv4(), notebookId: newId, createdAt: now(), updatedAt: now(),
         }));
         set((s) => ({ notebooks: [...s.notebooks, copy], pages: [...s.pages, ...copiedPages] }));
+        saveNotebookToDB(copy);
+        queueOperation("upsert_notebook", copy);
+        copiedPages.forEach((p) => {
+          savePageToDB(p);
+          queueOperation("upsert_page", p);
+        });
         return copy;
       },
 
@@ -135,12 +174,19 @@ export const useNotebookStore = create<NotebookState>()(
           order, createdAt: now(), updatedAt: now(), isDeleted: false,
         };
         set((s) => ({ pages: [...s.pages, page] }));
+        savePageToDB(page);
+        queueOperation("upsert_page", page);
         return page;
       },
       renamePage: (id, name) => {
         set((s) => ({
           pages: s.pages.map((p) => p.id === id ? { ...p, name, updatedAt: now() } : p),
         }));
+        const pg = get().pages.find((p) => p.id === id);
+        if (pg) {
+          savePageToDB(pg);
+          queueOperation("upsert_page", pg);
+        }
       },
       deletePage: (id) => {
         set((s) => ({
@@ -148,6 +194,11 @@ export const useNotebookStore = create<NotebookState>()(
             p.id === id ? { ...p, isDeleted: true, deletedAt: now() } : p
           ),
         }));
+        const pg = get().pages.find((p) => p.id === id);
+        if (pg) {
+          savePageToDB(pg);
+          queueOperation("upsert_page", pg);
+        }
       },
       restorePage: (id) => {
         set((s) => ({
@@ -155,15 +206,23 @@ export const useNotebookStore = create<NotebookState>()(
             p.id === id ? { ...p, isDeleted: false, deletedAt: undefined } : p
           ),
         }));
+        const pg = get().pages.find((p) => p.id === id);
+        if (pg) {
+          savePageToDB(pg);
+          queueOperation("upsert_page", pg);
+        }
       },
       permanentlyDeletePage: (id) => {
         set((s) => ({ pages: s.pages.filter((p) => p.id !== id) }));
+        queueOperation("delete_page", { id });
       },
       duplicatePage: (id) => {
         const original = get().pages.find((p) => p.id === id);
         if (!original) throw new Error("Page not found");
         const copy: Page = { ...original, id: uuidv4(), name: `${original.name} (copy)`, createdAt: now(), updatedAt: now() };
         set((s) => ({ pages: [...s.pages, copy] }));
+        savePageToDB(copy);
+        queueOperation("upsert_page", copy);
         return copy;
       },
       updatePageSnapshot: (id, snapshotJson, thumbnailDataUrl) => {
@@ -174,6 +233,10 @@ export const useNotebookStore = create<NotebookState>()(
               : p
           ),
         }));
+        const pg = get().pages.find((p) => p.id === id);
+        if (pg) {
+          savePageToDB(pg);
+        }
       },
       reorderPages: (notebookId, pageIds) => {
         set((s) => ({

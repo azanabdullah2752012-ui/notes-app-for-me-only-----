@@ -17,6 +17,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
+import { useAuthStore } from "@/store/authStore";
+import { useNotebookStore } from "@/store/notebookStore";
 import { Button, Divider } from "@/components/ui";
 import { Theme } from "@/types";
 
@@ -57,6 +59,8 @@ type TabType =
 export default function SettingsModal() {
   const { settingsOpen, setSettingsOpen, theme, setTheme, setExportOpen } = useUIStore();
   const [tab, setTab] = React.useState<TabType>("appearance");
+  const { user, signOut } = useAuthStore();
+  const syncStatus = useNotebookStore((s) => s.syncStatus);
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: "general", label: "General", icon: <Sliders size={14} /> },
@@ -214,23 +218,73 @@ export default function SettingsModal() {
                   )}
 
                   {tab === "sync" && (
-                    <div className="p-4 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Cloud Sync Status</p>
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Offline-first local storage is active. Automatic sync triggers on connectivity.
-                      </p>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Cloud Sync Engine</p>
+                          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                            Priority: RAM → IndexedDB (Offline) → Supabase (Cloud)
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--accent-subtle)] text-[var(--accent)] capitalize">
+                          {syncStatus}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-tertiary)] space-y-1">
+                        <p>• Offline-first local IndexedDB cache is active.</p>
+                        <p>• Automatic background upload triggers on 1.5s inactivity or network reconnection.</p>
+                        <p>• Conflict Resolution: Last Write Wins at page snapshot level.</p>
+                      </div>
                     </div>
                   )}
 
                   {tab === "account" && (
-                    <div className="p-4 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center text-white font-bold">
-                        U
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm text-[var(--text-primary)]">Personal Workspace</p>
-                        <p className="text-xs text-[var(--text-tertiary)]">Local Account</p>
-                      </div>
+                    <div className="space-y-4">
+                      {user ? (
+                        <div className="p-5 rounded-[16px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center text-white font-bold text-lg overflow-hidden shadow-md flex-shrink-0">
+                              {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                              ) : (
+                                user.name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-base text-[var(--text-primary)] truncate">{user.name}</p>
+                              <p className="text-xs text-[var(--text-secondary)] truncate">{user.email || "Google Account"}</p>
+                              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                                Joined: {new Date(user.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                            Sign Out
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-[16px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-4">
+                          <div className="w-12 h-12 rounded-full bg-[var(--bg-hover)] mx-auto flex items-center justify-center text-[var(--text-secondary)]">
+                            <User size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm text-[var(--text-primary)]">Offline Workspace Mode</h4>
+                            <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto mt-1">
+                              Sign in with your Google account to automatically backup your notebooks to the cloud and sync across devices.
+                            </p>
+                          </div>
+                          <Button
+                            variant="accent"
+                            size="md"
+                            onClick={() => {
+                              setSettingsOpen(false);
+                              useAuthStore.getState().setLoginModalOpen(true);
+                            }}
+                          >
+                            Sign In with Google
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
 
