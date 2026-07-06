@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Theme } from "@/types";
 
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message?: string;
+  type?: "success" | "info" | "warning" | "error";
+}
+
 interface UIState {
   // Theme
   theme: Theme;
@@ -24,6 +31,9 @@ interface UIState {
   exportOpen: boolean;
   renameTarget: { type: "notebook" | "page" | "folder"; id: string } | null;
 
+  // Notifications
+  notifications: NotificationItem[];
+
   // Actions
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
@@ -35,6 +45,8 @@ interface UIState {
   setSettingsOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
   setRenameTarget: (target: UIState["renameTarget"]) => void;
+  addNotification: (notification: Omit<NotificationItem, "id">) => void;
+  removeNotification: (id: string) => void;
 }
 
 function resolveTheme(theme: Theme): "dark" | "light" {
@@ -56,7 +68,7 @@ export const useUIStore = create<UIState>()(
       theme: "dark",
       resolvedTheme: "dark",
       sidebarOpen: true,
-      sidebarWidth: 260,
+      sidebarWidth: 280,
       activeNotebookId: null,
       activePageId: null,
       searchQuery: "",
@@ -64,6 +76,7 @@ export const useUIStore = create<UIState>()(
       settingsOpen: false,
       exportOpen: false,
       renameTarget: null,
+      notifications: [],
 
       setTheme: (theme) => {
         const resolved = resolveTheme(theme);
@@ -73,7 +86,7 @@ export const useUIStore = create<UIState>()(
       },
 
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-      setSidebarWidth: (w) => set({ sidebarWidth: Math.max(200, Math.min(400, w)) }),
+      setSidebarWidth: (w) => set({ sidebarWidth: Math.max(240, Math.min(360, w)) }),
       setActiveNotebook: (id) => set({ activeNotebookId: id }),
       setActivePage: (id) => set({ activePageId: id }),
       setSearchQuery: (q) => set({ searchQuery: q }),
@@ -81,6 +94,15 @@ export const useUIStore = create<UIState>()(
       setSettingsOpen: (open) => set({ settingsOpen: open }),
       setExportOpen: (open) => set({ exportOpen: open }),
       setRenameTarget: (target) => set({ renameTarget: target }),
+      addNotification: (n) => {
+        const id = Math.random().toString(36).substring(2, 9);
+        set((s) => ({ notifications: [...s.notifications, { ...n, id }] }));
+        setTimeout(() => {
+          get().removeNotification(id);
+        }, 4000);
+      },
+      removeNotification: (id) =>
+        set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
     }),
     {
       name: "bynotes-ui",

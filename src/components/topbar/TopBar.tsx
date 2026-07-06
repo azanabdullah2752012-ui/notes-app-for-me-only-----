@@ -21,13 +21,21 @@ import { Theme, SaveStatus } from "@/types";
 // ─── Save Status Indicator ───────────────────────────────────────────────────
 
 function SaveIndicator({ status }: { status: SaveStatus }) {
+  const [displayStatus, setDisplayStatus] = useState<string>("Saved");
+
+  useEffect(() => {
+    if (status === "saving") setDisplayStatus("Saving…");
+    else if (status === "saved") setDisplayStatus("Saved");
+    else if (status === "unsaved") setDisplayStatus("Offline");
+  }, [status]);
+
   return (
     <div
       className={clsx(
-        "flex items-center gap-1.5 text-xs px-2 py-1 rounded-full transition-all duration-300",
-        status === "saved" && "text-[var(--text-tertiary)]",
-        status === "saving" && "text-[var(--warning)]",
-        status === "unsaved" && "text-[var(--text-tertiary)]"
+        "flex items-center gap-2 text-xs px-2.5 py-1 rounded-full transition-all duration-300 select-none",
+        status === "saved" && "text-[var(--text-tertiary)] bg-[var(--bg-hover)]/50",
+        status === "saving" && "text-[var(--warning)] bg-[var(--warning)]/10 font-medium",
+        status === "unsaved" && "text-[var(--text-tertiary)] bg-[var(--bg-hover)]"
       )}
     >
       {status === "saving" && (
@@ -36,8 +44,11 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
       {status === "saved" && (
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
       )}
-      <span className="hidden sm:inline">
-        {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Unsaved"}
+      {status === "unsaved" && (
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-tertiary)]" />
+      )}
+      <span className="hidden sm:inline transition-opacity duration-200">
+        {displayStatus}
       </span>
     </div>
   );
@@ -170,7 +181,7 @@ export default function TopBar({ onUndo, onRedo, canUndo, canRedo }: TopBarProps
 
   return (
     <header
-      className="flex items-center gap-2 px-3 h-11 flex-shrink-0 border-b"
+      className="flex items-center gap-2 px-3 h-16 flex-shrink-0 border-b"
       style={{
         background: "var(--glass-bg)",
         backdropFilter: "blur(var(--glass-blur))",

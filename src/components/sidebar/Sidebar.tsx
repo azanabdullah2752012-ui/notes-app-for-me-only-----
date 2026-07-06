@@ -19,7 +19,7 @@ import {
 import clsx from "clsx";
 import { useUIStore } from "@/store/uiStore";
 import { useNotebookStore } from "@/store/notebookStore";
-import { Button, Divider, Input } from "@/components/ui";
+import { Button, Divider, Input, Tooltip } from "@/components/ui";
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 
@@ -229,15 +229,20 @@ export default function Sidebar() {
     createNotebook("Untitled Notebook");
   };
 
+  const handleLogoClick = () => {
+    useUIStore.getState().setActiveNotebook(null);
+    useUIStore.getState().setActivePage(null);
+  };
+
   return (
     <motion.aside
       initial={false}
       animate={{
-        width: sidebarOpen ? sidebarWidth : 0,
-        opacity: sidebarOpen ? 1 : 0,
+        width: sidebarOpen ? sidebarWidth : 72,
+        opacity: 1,
       }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="relative flex-shrink-0 flex flex-col h-full overflow-hidden"
+      className="relative flex-shrink-0 flex flex-col h-full overflow-hidden select-none"
       style={{
         background: "var(--sidebar-bg)",
         borderRight: "1px solid var(--sidebar-border)",
@@ -246,117 +251,206 @@ export default function Sidebar() {
       }}
       aria-label="Sidebar"
     >
-      <div className="flex flex-col h-full" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
-        {/* Workspace Header */}
-        <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-          <div className="w-6 h-6 rounded-[6px] bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center flex-shrink-0">
-            <BookOpen size={12} className="text-white" />
-          </div>
-          <span className="font-semibold text-sm text-[var(--text-primary)] truncate flex-1">
-            ByNotes
-          </span>
-        </div>
-
-        {/* Search */}
-        <div className="px-3 mb-3">
-          <Input
-            icon={<Search size={13} />}
-            placeholder="Search notebooks…"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setSearchOpen(e.target.value.length > 0);
-            }}
-            aria-label="Search notebooks"
-          />
-        </div>
-
-        {/* Nav Items */}
-        <div className="px-2 mb-2 space-y-0.5">
-          <NavItem
-            icon={<BookOpen size={14} />}
-            label="All Notebooks"
-            active={view === "all"}
-            count={activeNotebooks.length}
-            onClick={() => setView("all")}
-          />
-          <NavItem
-            icon={<Star size={14} />}
-            label="Favorites"
-            active={view === "favorites"}
-            count={favoriteNotebooks.length}
-            onClick={() => setView("favorites")}
-          />
-          <NavItem
-            icon={<Clock size={14} />}
-            label="Recent"
-            active={view === "recent"}
-            onClick={() => setView("recent")}
-          />
-          <NavItem
-            icon={<Trash2 size={14} />}
-            label="Trash"
-            active={view === "trash"}
-            count={trashNotebooks.length}
-            onClick={() => setView("trash")}
-          />
-        </div>
-
-        <Divider className="mx-3" />
-
-        {/* Notebook List */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-          <SectionHeader
-            label={view === "trash" ? "Deleted" : view === "favorites" ? "Favorites" : "Notebooks"}
-            onAdd={view === "all" ? handleNewNotebook : undefined}
-            addLabel="New Notebook"
-          />
-
-          {view === "trash" && trashNotebooks.length === 0 && (
-            <p className="text-xs text-[var(--text-tertiary)] px-3 py-2">Trash is empty</p>
-          )}
-
-          {(view === "all" ? filteredNotebooks : view === "favorites" ? favoriteNotebooks : view === "trash" ? trashNotebooks : activeNotebooks).map(
-            (nb) => {
-              const pageCount = notebooks.find((n) => n.id === nb.id)
-                ? useNotebookStore.getState().pages.filter((p) => p.notebookId === nb.id && !p.isDeleted).length
-                : 0;
-              return (
-                <NotebookItem
-                  key={nb.id}
-                  id={nb.id}
-                  name={nb.name}
-                  pageCount={pageCount}
-                  active={activeNotebookId === nb.id}
-                />
-              );
-            }
-          )}
-
-          {filteredNotebooks.length === 0 && view === "all" && !searchQuery && (
-            <div className="px-3 py-4 text-center">
-              <p className="text-xs text-[var(--text-tertiary)] mb-2">No notebooks yet</p>
+      {/* ─── Collapsed 72px Rail ─────────────────────────────────────────── */}
+      {!sidebarOpen ? (
+        <div className="flex flex-col items-center justify-between h-full py-4 w-[72px]">
+          <div className="flex flex-col items-center gap-4 w-full px-2">
+            <Tooltip label="📒 ByNotes Dashboard" side="right">
               <button
-                onClick={handleNewNotebook}
-                className="text-xs text-[var(--accent)] hover:underline"
+                onClick={handleLogoClick}
+                className="w-10 h-10 rounded-[10px] bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center shadow-md hover:scale-105 transition-transform"
               >
-                Create your first notebook
+                <BookOpen size={18} className="text-white" />
               </button>
-            </div>
-          )}
+            </Tooltip>
+            <Divider className="w-8 my-0.5" />
+            <Tooltip label="Search (⌘K)" side="right">
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="w-10 h-10 rounded-[10px] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <Search size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip label="All Notebooks" side="right">
+              <button
+                onClick={() => { useUIStore.getState().toggleSidebar(); setView("all"); }}
+                className={clsx(
+                  "w-10 h-10 rounded-[10px] flex items-center justify-center transition-colors",
+                  view === "all" ? "bg-[var(--accent-subtle)] text-[var(--accent)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                <Folder size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Favorites" side="right">
+              <button
+                onClick={() => { useUIStore.getState().toggleSidebar(); setView("favorites"); }}
+                className={clsx(
+                  "w-10 h-10 rounded-[10px] flex items-center justify-center transition-colors",
+                  view === "favorites" ? "bg-[var(--accent-subtle)] text-[var(--accent)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                <Star size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Recent" side="right">
+              <button
+                onClick={() => { useUIStore.getState().toggleSidebar(); setView("recent"); }}
+                className={clsx(
+                  "w-10 h-10 rounded-[10px] flex items-center justify-center transition-colors",
+                  view === "recent" ? "bg-[var(--accent-subtle)] text-[var(--accent)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                <Clock size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Trash" side="right">
+              <button
+                onClick={() => { useUIStore.getState().toggleSidebar(); setView("trash"); }}
+                className={clsx(
+                  "w-10 h-10 rounded-[10px] flex items-center justify-center transition-colors",
+                  view === "trash" ? "bg-[var(--accent-subtle)] text-[var(--accent)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                <Trash2 size={18} />
+              </button>
+            </Tooltip>
+          </div>
+          <div className="flex flex-col items-center gap-2 w-full px-2">
+            <Tooltip label="Settings (⌘,)" side="right">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="w-10 h-10 rounded-[10px] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <Settings size={18} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
+      ) : (
+        /* ─── Expanded Sidebar ────────────────────────────────────────────── */
+        <div className="flex flex-col h-full" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
+          {/* Workspace Header */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            <button
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 text-left group flex-1 truncate"
+              title="Return to ByNotes Dashboard"
+            >
+              <div className="w-6 h-6 rounded-[6px] bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-sm">
+                <BookOpen size={12} className="text-white" />
+              </div>
+              <span className="font-semibold text-sm text-[var(--text-primary)] truncate group-hover:text-[var(--accent)] transition-colors">
+                📒 ByNotes
+              </span>
+            </button>
+            <span className="text-[10px] font-medium text-[var(--text-tertiary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded">
+              Personal
+            </span>
+          </div>
 
-        <Divider className="mx-3" />
+          {/* Search */}
+          <div className="px-3 mb-3">
+            <Input
+              icon={<Search size={13} />}
+              placeholder="Search notebooks…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchOpen(e.target.value.length > 0);
+              }}
+              aria-label="Search notebooks"
+            />
+          </div>
 
-        {/* Settings */}
-        <div className="px-2 py-2">
-          <NavItem
-            icon={<Settings size={14} />}
-            label="Settings"
-            onClick={() => setSettingsOpen(true)}
-          />
+          {/* Nav Items */}
+          <div className="px-2 mb-2 space-y-0.5">
+            <NavItem
+              icon={<BookOpen size={14} />}
+              label="All Notebooks"
+              active={view === "all"}
+              count={activeNotebooks.length}
+              onClick={() => setView("all")}
+            />
+            <NavItem
+              icon={<Star size={14} />}
+              label="Favorites"
+              active={view === "favorites"}
+              count={favoriteNotebooks.length}
+              onClick={() => setView("favorites")}
+            />
+            <NavItem
+              icon={<Clock size={14} />}
+              label="Recent"
+              active={view === "recent"}
+              onClick={() => setView("recent")}
+            />
+            <NavItem
+              icon={<Trash2 size={14} />}
+              label="Trash"
+              active={view === "trash"}
+              count={trashNotebooks.length}
+              onClick={() => setView("trash")}
+            />
+          </div>
+
+          <Divider className="mx-3" />
+
+          {/* Notebook List */}
+          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
+            <SectionHeader
+              label={view === "trash" ? "Deleted" : view === "favorites" ? "Favorites" : "Notebooks"}
+              onAdd={view === "all" ? handleNewNotebook : undefined}
+              addLabel="New Notebook"
+            />
+
+            {view === "trash" && trashNotebooks.length === 0 && (
+              <p className="text-xs text-[var(--text-tertiary)] px-3 py-2">Trash is empty</p>
+            )}
+
+            {(view === "all" ? filteredNotebooks : view === "favorites" ? favoriteNotebooks : view === "trash" ? trashNotebooks : activeNotebooks).map(
+              (nb) => {
+                const pageCount = notebooks.find((n) => n.id === nb.id)
+                  ? useNotebookStore.getState().pages.filter((p) => p.notebookId === nb.id && !p.isDeleted).length
+                  : 0;
+                return (
+                  <NotebookItem
+                    key={nb.id}
+                    id={nb.id}
+                    name={nb.name}
+                    pageCount={pageCount}
+                    active={activeNotebookId === nb.id}
+                  />
+                );
+              }
+            )}
+
+            {filteredNotebooks.length === 0 && view === "all" && !searchQuery && (
+              <div className="px-3 py-4 text-center">
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">No notebooks yet</p>
+                <button
+                  onClick={handleNewNotebook}
+                  className="text-xs text-[var(--accent)] hover:underline font-medium"
+                >
+                  Create your first notebook
+                </button>
+              </div>
+            )}
+          </div>
+
+          <Divider className="mx-3" />
+
+          {/* Settings */}
+          <div className="px-2 py-2">
+            <NavItem
+              icon={<Settings size={14} />}
+              label="Settings"
+              onClick={() => setSettingsOpen(true)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Resize Handle */}
       {sidebarOpen && (

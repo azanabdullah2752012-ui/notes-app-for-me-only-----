@@ -143,3 +143,6 @@ export function Badge({ children, className }: { children: React.ReactNode; clas
     </span>
   );
 }
+
+export { default as Notifications } from "./Notifications";
+

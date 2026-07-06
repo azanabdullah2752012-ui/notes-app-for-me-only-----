@@ -5,6 +5,7 @@ import StatusBar from "@/components/statusbar/StatusBar";
 import CanvasArea from "@/components/editor/CanvasArea";
 import SettingsModal from "@/components/modals/SettingsModal";
 import SearchModal from "@/components/modals/SearchModal";
+import { Notifications } from "@/components/ui";
 import { EditorProvider, useEditorRef } from "@/components/editor/EditorContext";
 import { useUIStore } from "@/store/uiStore";
 import { useNotebookStore } from "@/store/notebookStore";
@@ -33,21 +34,36 @@ function AppShell() {
 
       if (meta && e.key === "k") { e.preventDefault(); setSearchOpen(true); return; }
       if (meta && e.key === ",") { e.preventDefault(); setSettingsOpen(true); return; }
-      if (meta && e.shiftKey && e.key === "S") { e.preventDefault(); toggleSidebar(); return; }
-      if (meta && !e.shiftKey && e.key === "n") {
+      if (meta && e.shiftKey && (e.key === "S" || e.key === "s")) { e.preventDefault(); toggleSidebar(); return; }
+      if (meta && !e.shiftKey && (e.key === "s" || e.key === "S")) {
         e.preventDefault();
-        if (activeNotebookId) {
-          const page = createPage(activeNotebookId);
-          setActivePage(page.id);
-        }
+        useUIStore.getState().addNotification({
+          title: "Manual Sync Complete",
+          message: "All notebooks and documents are saved locally.",
+          type: "success",
+        });
         return;
       }
-      if (meta && e.shiftKey && e.key === "N") {
+      if (meta && !e.shiftKey && (e.key === "n" || e.key === "N")) {
         e.preventDefault();
         const nb = createNotebook("Untitled Notebook");
         const firstPage = useNotebookStore.getState().pages.find((p) => p.notebookId === nb.id);
         setActiveNotebook(nb.id);
         if (firstPage) setActivePage(firstPage.id);
+        return;
+      }
+      if (meta && e.shiftKey && (e.key === "N" || e.key === "n")) {
+        e.preventDefault();
+        if (activeNotebookId) {
+          const page = createPage(activeNotebookId);
+          setActivePage(page.id);
+        } else {
+          useUIStore.getState().addNotification({
+            title: "No active notebook",
+            message: "Please open or create a notebook before adding a page.",
+            type: "warning",
+          });
+        }
         return;
       }
       if (meta && e.key === "e") { e.preventDefault(); useUIStore.getState().setExportOpen(true); return; }
@@ -84,6 +100,7 @@ function AppShell() {
       <StatusBar />
       <SettingsModal />
       <SearchModal />
+      <Notifications />
     </div>
   );
 }
