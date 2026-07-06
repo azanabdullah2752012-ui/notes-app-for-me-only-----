@@ -23,5 +23,16 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+    chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          tldraw: ["tldraw"],
+          react: ["react", "react-dom"],
+          ui: ["framer-motion", "lucide-react", "clsx"],
+          data: ["zustand", "idb", "@supabase/supabase-js", "uuid"],
+        },
+      },
+    },
   },
 });
