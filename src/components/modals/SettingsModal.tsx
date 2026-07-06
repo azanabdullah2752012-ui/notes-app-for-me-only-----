@@ -358,7 +358,7 @@ export default function SettingsModal() {
                   )}
 
                   {tab === "about" && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                       <div className="flex items-center gap-3.5">
                         <div className="w-14 h-14 rounded-[16px] bg-gradient-to-br from-[var(--brand-400)] to-[var(--brand-600)] flex items-center justify-center shadow-md">
                           <span className="text-white font-bold text-2xl">B</span>
@@ -373,9 +373,39 @@ export default function SettingsModal() {
                         ByNotes is a premium digital notebook designed to make software invisible so you can focus
                         only on learning, researching, and creating. Built strictly on the official tldraw SDK.
                       </p>
-                      <div className="p-3 rounded-[10px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-tertiary)] space-y-1">
-                        <p>Drawing engine: @tldraw/tldraw v5.2.2</p>
-                        <p>Framework: React 19 · Vite 8 · Tailwind CSS v4</p>
+                      
+                      {/* Roadmap Section (Sections 65-71) */}
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Product Roadmap</p>
+                        
+                        <div className="p-3 rounded-[12px] bg-[var(--success)]/10 border border-[var(--success)]/20 text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold text-[var(--success)]">
+                            <span>Version 1.0 (Current Release)</span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--success)] text-white">Live</span>
+                          </div>
+                          <p className="text-[var(--text-secondary)]">Notebook system, tldraw SDK v5, Google OAuth, Offline IDB vault, Supabase cloud sync, Export/Import.</p>
+                        </div>
+
+                        <div className="p-3 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold text-[var(--text-primary)]">
+                            <span>Version 1.1 (Next Up)</span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--bg-hover)] text-[var(--text-tertiary)]">In Review</span>
+                          </div>
+                          <p className="text-[var(--text-secondary)]">PDF Direct Annotation, OCR image text extraction, advanced handwriting search.</p>
+                        </div>
+
+                        <div className="p-3 rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold text-[var(--text-primary)]">
+                            <span>Version 2.0 &amp; 3.0 (Future Vision)</span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-[var(--bg-hover)] text-[var(--text-tertiary)]">Planned</span>
+                          </div>
+                          <p className="text-[var(--text-secondary)]">&ldquo;Nova&rdquo; AI Assistant (summaries, quiz generation, math solver), real-time collaboration &amp; live cursors.</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-[10px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-tertiary)] space-y-1 font-mono">
+                        <p>Engine: @tldraw/tldraw v5.2.2</p>
+                        <p>Tech Stack: React 19 · Vite 8 · Supabase · IDB</p>
                       </div>
                     </div>
                   )}

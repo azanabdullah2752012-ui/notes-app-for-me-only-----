@@ -145,4 +145,5 @@ export function Badge({ children, className }: { children: React.ReactNode; clas
 }
 
 export { default as Notifications } from "./Notifications";
+export * from "./ErrorBoundary";
 

@@ -1,17 +1,19 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, Suspense, lazy } from "react";
 import TopBar from "@/components/topbar/TopBar";
 import Sidebar from "@/components/sidebar/Sidebar";
 import StatusBar from "@/components/statusbar/StatusBar";
 import CanvasArea from "@/components/editor/CanvasArea";
-import SettingsModal from "@/components/modals/SettingsModal";
-import SearchModal from "@/components/modals/SearchModal";
-import LoginModal from "@/components/auth/LoginModal";
 import { Notifications } from "@/components/ui";
 import { EditorProvider, useEditorRef } from "@/components/editor/EditorContext";
 import { useUIStore } from "@/store/uiStore";
 import { useNotebookStore } from "@/store/notebookStore";
 import { useAuthStore } from "@/store/authStore";
 import { initializeSyncEngine } from "@/lib/syncEngine";
+
+// Lazy load non-critical modals for optimal bundle splitting (Section 73)
+const SettingsModal = lazy(() => import("@/components/modals/SettingsModal"));
+const SearchModal = lazy(() => import("@/components/modals/SearchModal"));
+const LoginModal = lazy(() => import("@/components/auth/LoginModal"));
 
 // ─── Inner shell — has access to EditorProvider context ──────────────────────
 
@@ -107,9 +109,11 @@ function AppShell() {
         <CanvasArea />
       </div>
       <StatusBar />
-      <SettingsModal />
-      <SearchModal />
-      <LoginModal />
+      <Suspense fallback={null}>
+        <SettingsModal />
+        <SearchModal />
+        <LoginModal />
+      </Suspense>
       <Notifications />
     </div>
   );
